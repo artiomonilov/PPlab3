@@ -1,81 +1,103 @@
+package org.example
+
 import java.io.File
+import kotlin.math.roundToInt
 
 class TranslatorTrivial {
-
-    private val dictionar = hashMapOf(
-        "Once" to "Odata", "upon" to "ca", "a" to "", "time" to "niciodata",
-        "there" to "acolo", "was" to "a fost", "an" to "o", "old" to "batrana",
-        "woman" to "femeie", "who" to "care", "loved" to "iubea",
-        "baking" to "sa gateasca", "gingerbread" to "turta dulce", "She" to "Ea",
-        "would" to "ar fi", "bake" to "gatit", "cookies" to "biscuiti",
-        "cakes" to "prajituri", "houses" to "case", "and" to "si",
-        "people" to "oameni", "all" to "toti", "decorated" to "decorati",
-        "with" to "cu", "chocolate" to "ciocolata", "peppermint" to "menta",
-        "caramel" to "caramel", "candies" to "bomboane", "colored" to "colorate",
-        "ingredients" to "ingrediente"
-    )
-
+    private val dictionar = hashMapOf<String, String>()
 
     fun adaugaCuvant(engleza: String, romana: String) {
         dictionar[engleza] = romana
-        println("-> Cuvant adaugat în dictionar: $engleza = $romana")
     }
 
-
-    fun traduce(poveste: String): String {
-
-        val textCuratat = poveste.replace("\n", " ")
-        val cuvinte = textCuratat.split(" ")
-
-
-        val povesteTradusa = java.lang.StringBuilder()
-
-        for (cuvant in cuvinte) {
-
-            val cuvantCuratat = cuvant.trim(',', '.')
-
-            if (cuvantCuratat.isNotEmpty()) {
-                if (dictionar.containsKey(cuvantCuratat)) {
-                    povesteTradusa.append(dictionar[cuvantCuratat]).append(" ")
-                } else {
-                    povesteTradusa.append("[$cuvantCuratat]").append(" ")
+    fun incarcaDictionarDinFisier(numeFisier: String) {
+        val fisier = File(numeFisier)
+        if (fisier.exists()) {
+            fisier.useLines { linii ->
+                linii.forEach { linie ->
+                    val parti = linie.split("=")
+                    if (parti.size == 2) {
+                        dictionar[parti[0].trim()] = parti[1].trim()
+                    }
                 }
             }
         }
-        return povesteTradusa.toString().trim()
     }
 
+    fun extrageDictionarDinEbook(numeFisier: String) {
+        val fisier = File(numeFisier)
+        if (fisier.exists()) {
+            val text = fisier.readText()
+            val cuvinte = text.split(Regex("\\W+")).filter { it.isNotBlank() }
+
+            for (cuvant in cuvinte) {
+                val cuvantMic = cuvant.lowercase()
+                if (!dictionar.containsKey(cuvantMic) && !dictionar.containsKey(cuvant)) {
+                    dictionar[cuvantMic] = "[NECUNOSCUT]"
+                }
+            }
+        }
+    }
 
     fun salveazaInFisier(numeFisier: String, continut: String) {
-        try {
-            File(numeFisier).writeText(continut)
-            println("-> Povestea tradusa a fost salvata cu succes in fisierul: $numeFisier")
-        } catch (e: Exception) {
-            println("-> Eroare la salvarea fisierului: ${e.message}")
+        File(numeFisier).writeText(continut)
+    }
+
+    fun traduce(text: String): String {
+        val cuvinte = text.replace("\n", " ").split(" ")
+        val rezultat = StringBuilder()
+
+        for (cuvant in cuvinte) {
+            val curatat = cuvant.trim(',', '.', '!', '?')
+            if (curatat.isNotEmpty()) {
+                if (dictionar.containsKey(curatat)) {
+                    rezultat.append(dictionar[curatat]).append(" ")
+                } else if (dictionar.containsKey(curatat.lowercase())) {
+                    rezultat.append(dictionar[curatat.lowercase()]).append(" ")
+                } else {
+                    rezultat.append("[$curatat]").append(" ")
+                }
+            }
         }
+        return rezultat.toString().trim()
+    }
+
+    fun calculeazaAcoperire(text: String): Int {
+        val cuvinte = text.replace("\n", " ").split(" ").map { it.trim(',', '.', '!', '?') }.filter { it.isNotEmpty() }
+        if (cuvinte.isEmpty()) return 0
+
+        var traduse = 0
+        for (cuvant in cuvinte) {
+            if (dictionar.containsKey(cuvant) || dictionar.containsKey(cuvant.lowercase())) {
+                val traducere = dictionar[cuvant] ?: dictionar[cuvant.lowercase()]
+                if (traducere != "[NECUNOSCUT]") {
+                    traduse++
+                }
+            }
+        }
+        return ((traduse.toDouble() / cuvinte.size) * 100).roundToInt()
     }
 }
 
 fun main(args: Array<String>) {
-    val poveste = """
-        Once upon a time there was an old woman who loved baking
-        gingerbread. She would bake gingerbread cookies, cakes, houses and
-        gingerbread people, all decorated with chocolate and peppermint, caramel
-        candies and colored ingredients.
-    """.trimIndent()
+    File("dictionar_intrare.txt").writeText("Once=Odata\nupon=ca\na=\ntime=niciodata\nthere=acolo\nwas=a fost\nan=o\nold=batrana\nwoman=femeie")
+    File("ebook_test.txt").writeText("Once upon a time there was an old woman who loved baking.")
 
     val translator = TranslatorTrivial()
 
+    translator.incarcaDictionarDinFisier("dictionar_intrare.txt")
 
-    println("=== TRADUCERE INITIALA ===")
-    val traducere1 = translator.traduce(poveste)
-    println(traducere1)
+    translator.adaugaCuvant("loved", "iubea")
 
+    translator.extrageDictionarDinEbook("ebook_test.txt")
 
-    println("\n=== ADĂUGARE CUVINTE NOI ===")
-    translator.adaugaCuvant("apple", "mar")
+    val poveste = "Once upon a time there was an old woman who loved baking."
 
+    val povesteTradusa = translator.traduce(poveste)
+    println(povesteTradusa)
 
-    println("\n=== SALVARE IN FISIER ===")
-    translator.salveazaInFisier("PovesteTradusa.txt", traducere1)
+    val acoperire = translator.calculeazaAcoperire(poveste)
+    println("Acoperire traducere: $acoperire%")
+
+    translator.salveazaInFisier("PovesteTradusa.txt", povesteTradusa)
 }

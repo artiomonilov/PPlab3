@@ -1,80 +1,82 @@
-data class Birth(val year: Int, val month: Int, val day: Int) {
+package org.example
+
+class Birth(val year: Int, val Month: Int, val Day: Int) {
     override fun toString(): String {
-        return "($day.$month.$year)"
+        return "($Day.$Month.$year)"
     }
 }
 
-data class Contact(val name: String, var phone: String, val birthDate: Birth) {
-    fun printContact() {
-        println("Name: $name, Mobile: $phone, Date: $birthDate")
+class Contact(val Name: String, var Phone: String, val BirthDate: Birth) {
+    fun Print() {
+        println("Name: $Name, Mobile: $Phone, Date: $BirthDate")
     }
 }
 
-class AgendaTelefon {
-    private val contacts = mutableListOf<Contact>()
+class Agenda {
+    private val contacte = mutableListOf<Contact>()
 
-    fun addContact(contact: Contact) {
-        contacts.add(contact)
-        println("-> Contact adaugat: ${contact.name}")
+    fun adauga(contact: Contact) {
+        contacte.add(contact)
     }
 
-    fun printAll() {
-        println("\n=== Agenda Curenta ===")
-        if (contacts.isEmpty()) {
+    fun sterge(contact: Contact) {
+        contacte.remove(contact)
+    }
+
+    fun cauta(criteriu: String): List<Contact> {
+        return contacte.filter {
+            it.Name.equals(criteriu, ignoreCase = true) || it.Phone == criteriu
+        }
+    }
+
+    fun actualizeazaTelefon(nume: String, telefonNou: String): Boolean {
+        val contact = contacte.find { it.Name.equals(nume, ignoreCase = true) }
+
+        if (contact != null) {
+            contact.Phone = telefonNou
+            return true
+        }
+        return false
+    }
+
+    fun afiseazaToate() {
+        if (contacte.isEmpty()) {
             println("Agenda este goala.")
         } else {
-            for (contact in contacts) {
-                contact.printContact()
+            for (contact in contacte) {
+                contact.Print()
             }
         }
-        println("======================\n")
-    }
-
-    fun searchByName(numeCautat: String): Contact? {
-        return contacts.find { it.name.equals(numeCautat, ignoreCase = true) }
-    }
-
-    fun updatePhone(nume: String, noulNumar: String): Boolean {
-        val contact = searchByName(nume)
-        if (contact != null) {
-            contact.phone = noulNumar
-            println("-> Numar actualizat cu succes pentru $nume.")
-            return true
-        }
-        println("-> Eroare: Contactul $nume nu a fost gasit.")
-        return false
-    }
-
-    fun deleteContact(nume: String): Boolean {
-        val contact = searchByName(nume)
-        if (contact != null) {
-            contacts.remove(contact)
-            println("-> Contactul $nume a fost sters.")
-            return true
-        }
-        println("-> Eroare: Contactul $nume nu a fost gasit pentru stergere.")
-        return false
     }
 }
 
-fun main() {
-    val agendaMea = AgendaTelefon()
+fun main(args: Array<String>) {
+    val agenda = Agenda()
 
-    agendaMea.addContact(Contact("Mihai", "0744321987", Birth(1900, 11, 25)))
-    agendaMea.addContact(Contact("George", "0761332100", Birth(2002, 3, 14)))
-    agendaMea.addContact(Contact("Liviu", "0231450211", Birth(1999, 7, 30)))
+    agenda.adauga(Contact("Mihai", "0744321987", Birth(1900, 11, 25)))
+    agenda.adauga(Contact("George", "0761332100", Birth(2002, 3, 14)))
+    agenda.adauga(Contact("Liviu", "0231450211", Birth(1999, 7, 30)))
+    agenda.adauga(Contact("Popescu", "0211342787", Birth(1955, 5, 12)))
 
-    agendaMea.printAll()
+    println("=== Agenda Initiala ===")
+    agenda.afiseazaToate()
 
-    println("--- Cautare contact 'George' ---")
-    val contactGasit = agendaMea.searchByName("George")
-    contactGasit?.printContact() ?: println("Nu a fost gasit.")
+    println("\n=== Cautare dupa nume ('Liviu') ===")
+    val rezultateNume = agenda.cauta("Liviu")
+    rezultateNume.forEach { it.Print() }
 
-    println("\n--- Actualizare numar 'Mihai' ---")
-    agendaMea.updatePhone("Mihai", "0700000000")
-    agendaMea.printAll()
+    println("\n=== Cautare dupa telefon ('0761332100') ===")
+    val rezultateTelefon = agenda.cauta("0761332100")
+    rezultateTelefon.forEach { it.Print() }
 
-    println("--- Stergere contact 'Liviu' ---")
-    agendaMea.deleteContact("Liviu")
-    agendaMea.printAll()
+    println("\n=== Actualizare numar pentru 'Mihai' ===")
+    val success = agenda.actualizeazaTelefon("Mihai", "0700111222")
+    if (success) {
+        println("Numarul a fost actualizat cu succes!")
+    } else {
+        println("Contactul nu a fost gasit.")
+    }
+
+    println("\n=== Agenda Dupa Actualizare ===")
+    agenda.afiseazaToate()
 }
